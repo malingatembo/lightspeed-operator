@@ -26,3 +26,6 @@
 
       # Mock token for CI deployment testing (operator installs but service won't be functional)
       cifmw_openstack_lightspeed_api_token: "dummy-token-for-ci"
+
+      # Mock TLS CA cert for CI deployment testing
+      cifmw_openstack_lightspeed_ca_cert: "dummy-cert-for-ci"
