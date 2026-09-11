@@ -12,10 +12,10 @@
       - openstack-k8s-operators/ci-framework
     vars:
       zuul_work_dir: "{{ ansible_user_dir }}/{{ zuul.projects['github.com/openstack-k8s-operators/lightspeed-operator'].src_dir }}"
-      pre_tests:
-        - name: Deploy Lightspeed operator
-          type: playbook
-          source: install-openstack-lightspeed.yml
+
+      pre_tests_01_deploy_lightspeed_operator:
+        source: install-openstack-lightspeed.yml
+        type: playbook
 
       # Operator catalog image from content-provider dependency
       cifmw_openstack_lightspeed_catalog_image: "{{ content_provider_registry_ip }}:5001/openstack-k8s-operators/lightspeed-operator-index:{{ zuul.patchset }}"
