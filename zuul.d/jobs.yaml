@@ -9,10 +9,19 @@
     required-projects:
       - openstack-k8s-operators/lightspeed-operator
       - openstack-k8s-operators/ci-framework
+      # Use the prepared test checkout, including Depends-On changes.
+      - openstack-k8s-operators/lightspeed-tests
     vars:
       pre_tests_01_deploy_lightspeed_operator:
         source: install-openstack-lightspeed.yml
         type: playbook
+
+      # Run against the instance made Ready by the preceding deployment hook.
+      pre_tests_02_run_lightspeed_tests:
+        source: run-openstack-lightspeed-tests.yml
+        type: playbook
+
+      cifmw_openstack_lightspeed_mock_enabled: true
 
       # Operator catalog image from content-provider dependency
       cifmw_openstack_lightspeed_catalog_image: "{{ content_provider_registry_ip }}:5001/openstack-k8s-operators/lightspeed-operator-index:{{ zuul.patchset }}"
