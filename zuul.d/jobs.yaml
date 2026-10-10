@@ -16,10 +16,19 @@
         source: install-openstack-lightspeed.yml
         type: playbook
 
-      # Run against the instance made Ready by the preceding deployment hook.
-      pre_tests_02_run_lightspeed_tests:
-        source: run-openstack-lightspeed-tests.yml
-        type: playbook
+      cifmw_run_tests: true
+      cifmw_test_operator_fail_on_test_failure: true
+      # Retain the inherited default Tempest stage, then test Lightspeed in a Pod.
+      cifmw_test_operator_stages:
+        - name: tempest
+          type: tempest
+        - name: lightspeed
+          type: ansibletest
+          pre_test_stage_hooks:
+            - name: Prepare Lightspeed tests
+              source: prepare-openstack-lightspeed-tests.yml
+              type: playbook
+          test_vars_file: "{{ cifmw_basedir }}/artifacts/lightspeed-test-stage.yml"
 
       cifmw_openstack_lightspeed_mock_enabled: true
 
