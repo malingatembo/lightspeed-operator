@@ -31,6 +31,8 @@
           test_vars_file: "{{ cifmw_basedir }}/artifacts/lightspeed-test-stage.yml"
 
       cifmw_openstack_lightspeed_mock_enabled: true
+      # Use the corrected Solr search provider; retain the default API image.
+      cifmw_openstack_lightspeed_ogx_image: quay.io/lightspeed-core/lightspeed-stack:0.7.0
 
       # Operator catalog image from content-provider dependency
       cifmw_openstack_lightspeed_catalog_image: "{{ content_provider_registry_ip }}:5001/openstack-k8s-operators/lightspeed-operator-index:{{ zuul.patchset }}"
