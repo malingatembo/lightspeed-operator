@@ -10,8 +10,6 @@
     required-projects:
       - openstack-k8s-operators/lightspeed-operator
       - openstack-k8s-operators/ci-framework
-      # Use the prepared test checkout, including Depends-On changes.
-      - openstack-k8s-operators/lightspeed-tests
     vars:
       pre_tests_01_deploy_lightspeed_operator:
         source: install-openstack-lightspeed.yml
@@ -19,21 +17,80 @@
 
       cifmw_run_tests: true
       cifmw_test_operator_fail_on_test_failure: true
-      # Retain the inherited default Tempest stage, then test Lightspeed in a Pod.
+      # Run Lightspeed integration tests through test-operator.
       cifmw_test_operator_stages:
-        - name: tempest
-          type: tempest
         - name: lightspeed
           type: ansibletest
-          pre_test_stage_hooks:
-            - name: Prepare Lightspeed tests
-              source: prepare-openstack-lightspeed-tests.yml
-              type: playbook
-          test_vars_file: "{{ cifmw_basedir }}/artifacts/lightspeed-test-stage.yml"
 
+      cifmw_test_operator_namespace: openstack
+      cifmw_test_operator_privileged: true
+      cifmw_test_operator_selinux_level: s0:c478,c978
+      cifmw_test_operator_ansibletest_name: ansibletest
+      cifmw_test_operator_ansibletest_image: quay.io/podified-antelope-centos9/openstack-ansible-tests
+      cifmw_test_operator_ansibletest_image_tag: current-podified
+      # Merge lightspeed-tests #17 before final validation of this job.
+      cifmw_test_operator_ansibletest_ansible_git_repo: https://github.com/openstack-k8s-operators/lightspeed-tests
+      cifmw_test_operator_ansibletest_ansible_git_branch: ""
+      cifmw_test_operator_ansibletest_ansible_playbook_path: playbooks/run_lightspeed_tests.yaml
+      cifmw_test_operator_ansibletest_ansible_inventory: |
+        localhost ansible_connection=local ansible_python_interpreter=python3
+      cifmw_test_operator_ansibletest_debug: false
+      cifmw_test_operator_ansibletest_resources:
+        requests:
+          cpu: 1000m
+          memory: 1Gi
+        limits:
+          cpu: 2000m
+          memory: 2Gi
+      # Use the existing reader definition override to match the test Pod.
+      cifmw_test_operator_log_pod_definition:
+        apiVersion: v1
+        kind: Pod
+        metadata:
+          name: "test-operator-logs-pod-{{ run_test_fw }}-{{ test_operator_instance_name }}"
+          namespace: "{{ stage_vars_dict.cifmw_test_operator_namespace }}"
+        spec:
+          securityContext:
+            runAsUser: 227
+            runAsGroup: 227
+            fsGroup: 227
+            seLinuxOptions:
+              level: "{{ cifmw_test_operator_selinux_level }}"
+          containers:
+            - name: test-operator-logs-container
+              image: "{{ cifmw_test_operator_logs_image }}"
+              command: ["sleep"]
+              args: ["infinity"]
+              volumeMounts: "{{ _test_operator_volume_mounts }}"
+          volumes: "{{ _test_operator_volumes }}"
+          tolerations: "{{ cifmw_test_operator_tolerations | default(omit) }}"
+          nodeSelector: "{{ cifmw_test_operator_node_selector | default(omit) }}"
+      cifmw_test_operator_ansibletest_ansible_var_files: |
+        test_suite_path: /var/lib/ansible/ansible
+        lightspeed_url: "https://lightspeed-app-server.{{ cifmw_openstack_lightspeed_namespace | default('openstack-lightspeed') }}.svc.cluster.local:8443"
+        lightspeed_timeout: 120
+        lightspeed_token_file: /lightspeed-auth/token
+        pytest_args: "-v --tb=short --color=no tests/integration"
+        junit_xml_path: /var/lib/AnsibleTests/external_files/baseline.xml
+      cifmw_test_operator_ansibletest_extra_mounts:
+        - name: lightspeed
+          extraVol:
+            - propagation: [AnsibleTest]
+              extraVolType: Undefined
+              volumes:
+                - name: lightspeed-client-token
+                  projected:
+                    sources:
+                      - serviceAccountToken:
+                          path: token
+                          expirationSeconds: 3600
+              mounts:
+                - name: lightspeed-client-token
+                  mountPath: /lightspeed-auth
+                  readOnly: true
+
+      # Fake LLM only; real-provider credentials are a follow-up.
       cifmw_openstack_lightspeed_mock_enabled: true
-      # Use the corrected Solr search provider; retain the default API image.
-      cifmw_openstack_lightspeed_ogx_image: quay.io/lightspeed-core/lightspeed-stack:0.7.0
 
       # Operator catalog image from content-provider dependency
       cifmw_openstack_lightspeed_catalog_image: "{{ content_provider_registry_ip }}:5001/openstack-k8s-operators/lightspeed-operator-index:{{ zuul.patchset }}"
