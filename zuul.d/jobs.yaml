@@ -42,13 +42,16 @@
         limits:
           cpu: 2000m
           memory: 2Gi
-      # Use the existing reader definition override to match the test Pod.
+      # Allow bootstrap to save parameters before runner and PVC facts exist.
+      # The collector supplies those facts when it creates this Pod.
       cifmw_test_operator_log_pod_definition:
         apiVersion: v1
         kind: Pod
         metadata:
-          name: "test-operator-logs-pod-{{ run_test_fw }}-{{ test_operator_instance_name }}"
-          namespace: "{{ stage_vars_dict.cifmw_test_operator_namespace }}"
+          name: >-
+            test-operator-logs-pod-{{ run_test_fw | default('ansibletest') }}-{{
+            test_operator_instance_name | default('ansibletest-lightspeed') }}
+          namespace: "{{ cifmw_test_operator_namespace }}"
         spec:
           securityContext:
             runAsUser: 227
@@ -58,11 +61,16 @@
               level: "{{ cifmw_test_operator_selinux_level }}"
           containers:
             - name: test-operator-logs-container
-              image: "{{ cifmw_test_operator_logs_image }}"
+              image: "{{ cifmw_test_operator_logs_image | default('quay.io/quay/busybox') }}"
               command: ["sleep"]
               args: ["infinity"]
-              volumeMounts: "{{ _test_operator_volume_mounts }}"
-          volumes: "{{ _test_operator_volumes }}"
+              # Resolve the collector's nested instance-name template before use.
+              volumeMounts: >-
+                {{ (_test_operator_volume_mounts | default([]) | to_json)
+                   | replace('{{ test_operator_instance_name }}',
+                             test_operator_instance_name | default('ansibletest-lightspeed'))
+                   | from_json }}
+          volumes: "{{ _test_operator_volumes | default([]) }}"
           tolerations: "{{ cifmw_test_operator_tolerations | default(omit) }}"
           nodeSelector: "{{ cifmw_test_operator_node_selector | default(omit) }}"
       cifmw_test_operator_ansibletest_ansible_var_files: |
