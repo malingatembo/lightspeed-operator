@@ -23,7 +23,7 @@
           type: ansibletest
 
       cifmw_test_operator_namespace: openstack
-      cifmw_test_operator_privileged: true
+      cifmw_test_operator_privileged: false
       cifmw_test_operator_selinux_level: s0:c478,c978
       cifmw_test_operator_ansibletest_name: ansibletest
       cifmw_test_operator_ansibletest_image: quay.io/podified-antelope-centos9/openstack-ansible-tests
@@ -44,6 +44,8 @@
           memory: 2Gi
       # Allow bootstrap to save parameters before runner and PVC facts exist.
       # The collector supplies those facts when it creates this Pod.
+      # Match AnsibleTest UID/GID 227 and its SELinux label to read the PVC.
+      # The role exposes a full Pod override, not a reader security-context setting.
       cifmw_test_operator_log_pod_definition:
         apiVersion: v1
         kind: Pod
