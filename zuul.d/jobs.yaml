@@ -11,9 +11,10 @@
       - openstack-k8s-operators/lightspeed-operator
       - openstack-k8s-operators/ci-framework
     vars:
-      pre_tests_01_deploy_lightspeed_operator:
-        source: install-openstack-lightspeed.yml
-        type: playbook
+      cifmw_extras:
+        - '@scenarios/centos-9/multinode-ci.yml'
+        - '@scenarios/centos-9/hci_ceph_backends.yml'
+        - "@{{ ansible_user_dir }}/{{ zuul.projects['github.com/openstack-k8s-operators/lightspeed-operator'].src_dir }}/ci/vars-lightspeed.yml"
 
       cifmw_run_tests: true
       cifmw_test_operator_fail_on_test_failure: true
@@ -28,9 +29,8 @@
       cifmw_test_operator_ansibletest_name: ansibletest
       cifmw_test_operator_ansibletest_image: quay.io/podified-antelope-centos9/openstack-ansible-tests
       cifmw_test_operator_ansibletest_image_tag: current-podified
-      # Temporary #17 branch test; restore upstream/default after merge.
-      cifmw_test_operator_ansibletest_ansible_git_repo: https://github.com/malingatembo/lightspeed-tests
-      cifmw_test_operator_ansibletest_ansible_git_branch: feat/OSPRH-33344-ci-test-runner
+      cifmw_test_operator_ansibletest_ansible_git_repo: https://github.com/openstack-k8s-operators/lightspeed-tests
+      cifmw_test_operator_ansibletest_ansible_git_branch: ""
       cifmw_test_operator_ansibletest_ansible_playbook_path: playbooks/run_lightspeed_tests.yaml
       cifmw_test_operator_ansibletest_ansible_inventory: |
         localhost ansible_connection=local ansible_python_interpreter=python3
@@ -79,7 +79,6 @@
         test_suite_path: /var/lib/ansible/ansible
         lightspeed_url: "https://lightspeed-app-server.{{ cifmw_openstack_lightspeed_namespace | default('openstack-lightspeed') }}.svc.cluster.local:8443"
         lightspeed_timeout: 120
-        lightspeed_token_file: /lightspeed-auth/token
         lightspeed_model: "provider-default-model/default-model"
         pytest_args: "-v --tb=short --color=no -m 'not llm_dependent' tests/integration"
         junit_xml_path: /var/lib/AnsibleTests/external_files/baseline.xml
@@ -97,7 +96,7 @@
                           expirationSeconds: 3600
               mounts:
                 - name: lightspeed-client-token
-                  mountPath: /lightspeed-auth
+                  mountPath: /var/run/secrets/kubernetes.io/serviceaccount
                   readOnly: true
 
       # Fake LLM only; real-provider credentials are a follow-up.
@@ -106,7 +105,7 @@
       # Operator catalog image from content-provider dependency
       cifmw_openstack_lightspeed_catalog_image: "{{ content_provider_registry_ip }}:5001/openstack-k8s-operators/lightspeed-operator-index:{{ zuul.patchset }}"
 
-      # Mock provider deployed by the ci-framework hook
+      # Mock provider deployed by the operator-owned hook
       cifmw_openstack_lightspeed_llm_endpoint: "http://mock-llm-api-server-pod.openstack-lightspeed.svc.cluster.local:8000/v1"
       cifmw_openstack_lightspeed_llm_endpoint_type: "openai"
       cifmw_openstack_lightspeed_model_name: "example-model"
